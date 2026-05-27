@@ -1,59 +1,80 @@
 <template>
-  <div class="fade-in">
-    <div style="padding:16px 16px 0;">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
-        <div class="neu-flat" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;" @click="$router.back()">
-          <van-icon name="arrow-left" size="20" />
-        </div>
-        <div style="font-size:22px;font-weight:800;">添加供应商</div>
+  <div class="slide-up">
+    <div class="page-header">
+      <div class="icon-btn" @click="$router.back()">
+        <van-icon name="arrow-left" size="20" />
+      </div>
+      <div>
+        <div class="page-header-title">添加供应商</div>
+        <div class="page-header-sub">Add Supplier</div>
       </div>
     </div>
 
-    <div class="page-padding">
-      <!-- 预设 -->
-      <div class="section-label">快速添加</div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">
-        <div v-for="p in presets" :key="p.name"
-          class="neu-flat"
-          :class="{ 'neu-pressed': selected === p.name }"
-          style="padding:16px 8px;text-align:center;cursor:pointer;transition:all 0.15s;"
-          @click="applyPreset(p)">
-          <div style="font-size:32px;">{{ p.icon }}</div>
-          <div style="font-size:12px;font-weight:600;margin-top:6px;color:var(--text-secondary);">{{ p.name }}</div>
+    <div class="page-pad">
+      <div class="section-title" style="margin-bottom:10px;">快速添加</div>
+      <div class="preset-grid">
+        <div v-for="p in presets" :key="p.name" class="preset-card" :class="{ selected: selected === p.name }" @click="applyPreset(p)">
+          <div class="preset-icon">{{ p.icon }}</div>
+          <div class="preset-name">{{ p.name }}</div>
         </div>
       </div>
 
-      <!-- 表单 -->
-      <div class="section-label">供应商信息</div>
-      <div class="neu" style="padding:20px;border-radius:20px;">
-        <div style="margin-bottom:14px;" v-for="field in fields" :key="field.key">
-          <div style="font-size:12px;font-weight:600;color:var(--text-secondary);margin-bottom:6px;text-transform:uppercase;letter-spacing:0.5px;">{{ field.label }}</div>
-          <div style="position:relative;">
-            <input class="neu-input" v-model="form[field.key]" :placeholder="field.placeholder" :type="field.type || 'text'" :readonly="field.readonly" />
-            <button v-if="field.key === 'apiKey' && form.apiKey" class="neu-btn" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);padding:6px 10px;font-size:14px;border-radius:10px;" @click="copyKey">{{ copied ? '&#10003;' : '&#128203;' }}</button>
+      <div class="section-title" style="margin-bottom:10px;">配置信息</div>
+      <div class="card">
+        <div class="card-body">
+          <div class="input-wrap">
+            <label class="input-label">名称</label>
+            <input class="input" v-model="form.name" placeholder="例: DeepSeek" />
+          </div>
+          <div class="input-wrap">
+            <label class="input-label">图标 (Emoji)</label>
+            <input class="input" v-model="form.icon" placeholder="输入emoji" style="width:100px;" />
+          </div>
+          <div class="input-wrap">
+            <label class="input-label">API Base URL</label>
+            <input class="input" v-model="form.baseUrl" placeholder="https://api.deepseek.com" />
+          </div>
+          <div class="input-wrap">
+            <label class="input-label">API Key</label>
+            <div style="position:relative;">
+              <input class="input" v-model="form.apiKey" placeholder="sk-..." style="padding-right:80px;" />
+              <button v-if="form.apiKey" class="btn btn-ghost btn-sm" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);border:none;" @click="copyKey">{{ copied ? '已复制' : '复制' }}</button>
+            </div>
+          </div>
+          <div class="input-wrap">
+            <label class="input-label">模型列表 (测试后自动获取)</label>
+            <input class="input" v-model="modelsStr" placeholder="留空，测试后自动填充" readonly style="background:var(--surface-2);" />
+          </div>
+          <div class="input-wrap" style="margin-bottom:0;">
+            <label class="input-label">上下文长度 (K)</label>
+            <input class="input" v-model.number="form.contextLength" type="number" placeholder="测试后自动获取" />
           </div>
         </div>
       </div>
 
-      <!-- 测试结果 -->
-      <div v-if="testResult" style="margin-top:14px;">
-        <div v-if="testResult.ok" class="neu" style="padding:14px 18px;border-radius:14px;border-left:4px solid var(--success);">
-          <div style="font-size:14px;font-weight:600;color:var(--success);">&#10003; 连接成功</div>
-          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">{{ testResult.latency }}ms · {{ testResult.models }} 个模型{{ testResult.maxContext ? ' · ' + testResult.maxContext + 'K上下文' : '' }}</div>
+      <!-- 结果 -->
+      <div v-if="testResult" style="margin-top:14px;" class="fade-in">
+        <div v-if="testResult.ok" class="card" style="border-left:3px solid var(--success);">
+          <div class="card-body" style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:600;color:var(--success);">连接成功</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">{{ testResult.latency }}ms · {{ testResult.models }} 个模型{{ testResult.maxContext ? ' · ' + testResult.maxContext + 'K上下文' : '' }}</div>
+          </div>
         </div>
-        <div v-else class="neu" style="padding:14px 18px;border-radius:14px;border-left:4px solid var(--danger);">
-          <div style="font-size:14px;font-weight:600;color:var(--danger);">&#10007; 连接失败</div>
-          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">{{ testResult.error }}</div>
+        <div v-else class="card" style="border-left:3px solid var(--danger);">
+          <div class="card-body" style="padding:12px 14px;">
+            <div style="font-size:13px;font-weight:600;color:var(--danger);">连接失败</div>
+            <div style="font-size:12px;color:var(--text-2);margin-top:2px;">{{ testResult.error }}</div>
+          </div>
         </div>
       </div>
 
       <!-- 按钮 -->
-      <div style="display:flex;gap:12px;margin-top:20px;">
-        <button class="neu-btn" style="flex:1;padding:14px;" @click="testConnection" :disabled="!canTest">
-          {{ testing ? '测试中...' : '&#128279; 测试连接' }}
+      <div style="display:flex;gap:10px;margin-top:18px;">
+        <button class="btn btn-sm" style="flex:1;" @click="testConnection" :disabled="!canTest">
+          {{ testing ? '测试中...' : '测试连接' }}
         </button>
-        <button class="neu-btn neu-btn-success" style="flex:1;padding:14px;" @click="save" :disabled="!canSave">
-          &#128190; 保存
+        <button class="btn btn-success btn-sm" style="flex:1;" @click="save" :disabled="!canSave">
+          保存供应商
         </button>
       </div>
     </div>
@@ -78,18 +99,10 @@ const presets = [
   { name: 'Ollama', icon: '&#129433;', baseUrl: 'http://localhost:11434', contextLength: 32 },
 ]
 
-const fields = [
-  { key: 'name', label: '名称', placeholder: '例: DeepSeek' },
-  { key: 'icon', label: '图标', placeholder: '输入emoji', type: 'text' },
-  { key: 'baseUrl', label: 'API Base URL', placeholder: 'https://api.deepseek.com' },
-  { key: 'apiKey', label: 'API Key', placeholder: 'sk-...', type: 'text' },
-  { key: 'models', label: '模型 (测试后自动获取)', placeholder: '留空', readonly: true },
-  { key: 'contextLength', label: '上下文长度 (K)', placeholder: '测试后自动获取', type: 'number' },
-]
-
 const selected = ref('')
 const copied = ref(false)
-const form = ref({ name: '', icon: '', baseUrl: '', apiKey: '', models: '', contextLength: '' })
+const form = ref({ name: '', icon: '', baseUrl: '', apiKey: '', contextLength: 0 })
+const modelsStr = ref('')
 const testing = ref(false)
 const testResult = ref<any>(null)
 
@@ -97,37 +110,25 @@ const canTest = computed(() => form.value.name && form.value.baseUrl && form.val
 const canSave = computed(() => form.value.name && form.value.baseUrl && form.value.apiKey)
 
 function copyKey() { navigator.clipboard.writeText(form.value.apiKey); copied.value = true; setTimeout(() => { copied.value = false }, 1500) }
-
-function applyPreset(p: any) {
-  selected.value = p.name
-  form.value.name = p.name
-  form.value.icon = p.icon
-  form.value.baseUrl = p.baseUrl
-  form.value.contextLength = String(p.contextLength)
-  testResult.value = null
-}
+function applyPreset(p: any) { selected.value = p.name; Object.assign(form.value, { name: p.name, icon: p.icon, baseUrl: p.baseUrl, contextLength: p.contextLength }); testResult.value = null }
 
 async function testConnection() {
-  testing.value = true
-  testResult.value = null
+  testing.value = true; testResult.value = null
   try {
     const resp = await fetch(`/api/test?url=${encodeURIComponent(form.value.baseUrl)}&key=${encodeURIComponent(form.value.apiKey)}&name=${encodeURIComponent(form.value.name)}`)
     const data = await resp.json()
     if (data.ok) {
-      if (data.models?.length) form.value.models = data.models.join(', ')
-      if (data.maxContext && !form.value.contextLength) form.value.contextLength = String(data.maxContext)
+      if (data.models?.length) modelsStr.value = data.models.join(', ')
+      if (data.maxContext && !form.value.contextLength) form.value.contextLength = data.maxContext
       testResult.value = { ok: true, latency: data.latency, models: data.models?.length || 0, maxContext: data.maxContext }
-    } else {
-      testResult.value = { ok: false, error: data.error || `HTTP ${data.status}` }
-    }
+    } else { testResult.value = { ok: false, error: data.error || `HTTP ${data.status}` } }
   } catch (e: any) { testResult.value = { ok: false, error: e.message } }
   testing.value = false
 }
 
 function save() {
-  const models = form.value.models ? form.value.models.split(',').map(m => m.trim()).filter(Boolean) : []
-  addSupplier({ name: form.value.name, icon: form.value.icon || '🤖', baseUrl: form.value.baseUrl.replace(/\/+$/, ''), apiKey: form.value.apiKey, models, contextLength: Number(form.value.contextLength) || 0 })
-  showToast({ message: '添加成功', type: 'success' })
-  router.push('/')
+  const models = modelsStr.value ? modelsStr.value.split(',').map(m => m.trim()).filter(Boolean) : []
+  addSupplier({ name: form.value.name, icon: form.value.icon || '&#129302;', baseUrl: form.value.baseUrl.replace(/\/+$/, ''), apiKey: form.value.apiKey, models, contextLength: form.value.contextLength })
+  showToast({ message: '添加成功', type: 'success' }); router.push('/')
 }
 </script>
