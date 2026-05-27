@@ -110,7 +110,7 @@ async function testConnection() {
   testing.value = true
   testResult.value = null
   try {
-    const resp = await fetch(`/api/test?url=${encodeURIComponent(form.value.baseUrl)}&key=${encodeURIComponent(form.value.apiKey)}`)
+    const resp = await fetch(`/api/test?url=${encodeURIComponent(form.value.baseUrl)}&key=${encodeURIComponent(form.value.apiKey)}&name=${encodeURIComponent(form.value.name)}`)
     const data = await resp.json()
     if (data.ok) {
       if (data.models?.length) modelsStr.value = data.models.join(', ')

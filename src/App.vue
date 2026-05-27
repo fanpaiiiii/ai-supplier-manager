@@ -9,6 +9,10 @@
         <span class="nav-icon">➕</span>
         <span class="nav-label">添加</span>
       </router-link>
+      <router-link to="/logs" class="nav-item" active-class="active">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">日志</span>
+      </router-link>
       <router-link to="/settings" class="nav-item" active-class="active">
         <span class="nav-icon">⚙️</span>
         <span class="nav-label">设置</span>
