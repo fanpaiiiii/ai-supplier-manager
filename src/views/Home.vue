@@ -1,12 +1,16 @@
 <template>
   <div class="fade-in">
-    <van-nav-bar title="AI 供应商管理" :border="false" style="background:transparent;">
-      <template #right>
-        <van-icon name="replay" size="20" @click="testAll" />
-      </template>
-    </van-nav-bar>
+    <div style="padding:16px 16px 0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+        <div>
+          <div style="font-size:24px;font-weight:800;letter-spacing:-0.5px;">供应商管理</div>
+          <div style="font-size:13px;color:var(--text-secondary);margin-top:2px;">AI Model Supplier Hub</div>
+        </div>
+        <div class="neu-flat" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:14px;" @click="testAll">
+          <van-icon name="replay" size="22" color="var(--primary)" />
+        </div>
+      </div>
 
-    <div class="page-padding">
       <!-- 统计 -->
       <div class="stat-grid">
         <div class="stat-card">
@@ -18,46 +22,57 @@
           <div class="stat-label">离线</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value">{{ avgLatency }}<small style="font-size:12px">ms</small></div>
-          <div class="stat-label">平均延迟</div>
+          <div class="stat-value">{{ avgLatency }}<small style="font-size:14px">ms</small></div>
+          <div class="stat-label">延迟</div>
         </div>
         <div class="stat-card">
           <div class="stat-value">{{ totalModels }}</div>
-          <div class="stat-label">模型数</div>
+          <div class="stat-label">模型</div>
         </div>
       </div>
 
       <!-- 搜索 -->
-      <van-search v-model="search" placeholder="搜索供应商..." shape="round" style="padding:0;margin-bottom:14px;" />
+      <div class="neu-inset" style="border-radius:14px;padding:4px;margin-bottom:16px;">
+        <van-search v-model="search" placeholder="搜索供应商..." shape="round" :show-action="false" />
+      </div>
+    </div>
 
-      <!-- 操作按钮 -->
-      <div style="display:flex;gap:10px;margin-bottom:16px;">
-        <van-button type="primary" block round size="small" @click="testAll">🔄 批量测试</van-button>
-        <van-button plain type="primary" block round size="small" to="/add">➕ 添加</van-button>
+    <div class="page-padding">
+      <!-- 操作 -->
+      <div style="display:flex;gap:12px;margin-bottom:18px;">
+        <button class="neu-btn neu-btn-primary" style="flex:1;" @click="testAll">
+          <van-icon name="replay" style="margin-right:4px;" /> 批量测试
+        </button>
+        <button class="neu-btn" style="flex:1;" @click="$router.push('/add')">
+          <van-icon name="plus" style="margin-right:4px;" /> 添加供应商
+        </button>
       </div>
 
       <!-- 空状态 -->
-      <van-empty v-if="filtered.length === 0" :description="suppliers.length ? '没有匹配结果' : '还没有供应商'" image="search">
-        <van-button v-if="!suppliers.length" round type="primary" size="small" to="/add">添加第一个</van-button>
-      </van-empty>
+      <div v-if="filtered.length === 0" class="neu-inset" style="text-align:center;padding:40px 20px;border-radius:20px;">
+        <van-icon name="warning-o" size="48" color="var(--text-muted)" />
+        <div style="font-size:15px;color:var(--text-secondary);margin-top:12px;">{{ suppliers.length ? '没有匹配结果' : '还没有供应商' }}</div>
+        <button v-if="!suppliers.length" class="neu-btn neu-btn-primary" style="margin-top:16px;" @click="$router.push('/add')">添加第一个</button>
+      </div>
 
-      <!-- 供应商列表 -->
-      <van-cell-group v-else inset style="margin:0;border-radius:12px;overflow:hidden;">
-        <van-cell
-          v-for="s in filtered" :key="s.id"
-          :title="s.name"
-          :label="`${s.models.length} 模型 · ${s.latency ? s.latency + 'ms' : '未测试'}${s.contextLength ? ' · ' + formatCtx(s.contextLength) + '上下文' : ''}`"
-          is-link
-          :to="`/supplier/${s.id}`"
-        >
-          <template #icon>
-            <div style="font-size:28px;margin-right:10px;display:flex;align-items:center;">{{ s.icon }}</div>
-          </template>
-          <template #value>
-            <van-tag :type="tagType(s.status)" round size="small">{{ statusText(s.status) }}</van-tag>
-          </template>
-        </van-cell>
-      </van-cell-group>
+      <!-- 列表 -->
+      <div v-for="s in filtered" :key="s.id" class="neu-list-item" @click="$router.push(`/supplier/${s.id}`)">
+        <div style="width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:28px;" class="neu-flat">
+          {{ s.icon }}
+        </div>
+        <div style="flex:1;margin-left:14px;min-width:0;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span style="font-size:16px;font-weight:700;">{{ s.name }}</span>
+            <span class="neu-tag" :class="'neu-tag-' + (s.status === 'online' ? 'success' : s.status === 'testing' ? 'warning' : 'danger')">
+              {{ s.status === 'online' ? '在线' : s.status === 'testing' ? '测试中' : '离线' }}
+            </span>
+          </div>
+          <div style="font-size:12px;color:var(--text-secondary);margin-top:4px;">
+            {{ s.models.length }} 模型 · {{ s.latency ? s.latency + 'ms' : '未测试' }}{{ s.contextLength ? ' · ' + formatCtx(s.contextLength) + ' 上下文' : '' }}
+          </div>
+        </div>
+        <van-icon name="arrow" color="var(--text-muted)" size="18" />
+      </div>
     </div>
   </div>
 </template>
@@ -74,7 +89,5 @@ const filtered = computed(() => {
   return suppliers.value.filter(s => s.name.toLowerCase().includes(q) || s.baseUrl.toLowerCase().includes(q))
 })
 
-function tagType(s: string) { return s === 'online' ? 'success' : s === 'testing' ? 'warning' : 'danger' }
-function statusText(s: string) { return s === 'online' ? '在线' : s === 'testing' ? '测试中' : '离线' }
 function formatCtx(n: number) { return n >= 1000 ? (n / 1000) + 'M' : n + 'K' }
 </script>
