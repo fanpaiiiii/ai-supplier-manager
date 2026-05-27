@@ -44,8 +44,41 @@ async function loadLogs(limit = 200) {
   } catch {}
 }
 
+// Migrate localStorage data to backend on first load
+async function migrateFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem('ai-suppliers')
+    if (!raw) return
+    const localData = JSON.parse(raw)
+    if (!Array.isArray(localData) || localData.length === 0) {
+      localStorage.removeItem('ai-suppliers')
+      return
+    }
+    // Check if backend already has data
+    const resp = await fetch('/api/suppliers')
+    if (resp.ok) {
+      const backendData = await resp.json()
+      if (backendData.length > 0) {
+        localStorage.removeItem('ai-suppliers')
+        return
+      }
+    }
+    // Migrate each supplier to backend
+    for (const s of localData) {
+      await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(s),
+      })
+    }
+    localStorage.removeItem('ai-suppliers')
+    // Reload from backend
+    await loadSuppliers()
+  } catch {}
+}
+
 // Init
-loadSuppliers()
+loadSuppliers().then(() => migrateFromLocalStorage())
 
 export function useStore() {
   const onlineCount = computed(() => suppliers.value.filter(s => s.status === 'online').length)
