@@ -11,38 +11,30 @@
       </div>
     </div>
 
-    <!-- 测试配置 -->
-    <div class="section-title">测试配置</div>
-    <div class="card">
-      <div class="input-group">
-        <label class="input-label">测试超时 (ms)</label>
-        <input class="input" type="number" v-model.number="settings.timeout" placeholder="10000" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">并发测试数</label>
-        <input class="input" type="number" v-model.number="settings.concurrency" placeholder="3" />
-      </div>
-      <div class="switch-row" style="border-bottom:none;">
-        <span class="switch-label">自动测试 (每小时)</span>
-        <div class="toggle" :class="{ on: settings.autoTest }" @click="settings.autoTest = !settings.autoTest"></div>
-      </div>
-    </div>
-
     <!-- 数据管理 -->
     <div class="section-title">数据管理</div>
     <div class="card">
       <div class="list-item">
         <div class="list-item-left">
           <div class="list-item-title">供应商总数</div>
-          <div class="list-item-sub">本地存储的所有供应商</div>
+          <div class="list-item-sub">后端持久化存储</div>
         </div>
         <span style="font-size:20px;font-weight:700;color:var(--primary);">{{ suppliers.length }}</span>
       </div>
-      <div style="display:flex;gap:10px;margin-top:12px;">
-        <button class="btn btn-outline btn-sm" style="flex:1" @click="exportData">📤 导出数据</button>
-        <button class="btn btn-outline btn-sm" style="flex:1" @click="importData">📥 导入数据</button>
+
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:14px;">
+        <button class="btn btn-primary btn-sm btn-full" @click="exportPlaintext">📤 一键导出全部（明文密钥）</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-outline btn-sm" style="flex:1" @click="exportData">📦 导出JSON（脱敏）</button>
+          <button class="btn btn-outline btn-sm" style="flex:1" @click="importData">📥 导入数据</button>
+        </div>
       </div>
-      <button class="btn btn-danger btn-sm btn-full" style="margin-top:12px;" @click="clearData">🗑️ 清除所有数据</button>
+
+      <div v-if="exportMsg" style="margin-top:10px;">
+        <div class="tag tag-success" style="font-size:13px;">{{ exportMsg }}</div>
+      </div>
+
+      <button class="btn btn-danger btn-sm btn-full" style="margin-top:14px;" @click="clearData">🗑️ 清除所有数据</button>
     </div>
 
     <!-- 关于 -->
@@ -50,29 +42,23 @@
     <div class="card" style="text-align:center;">
       <div style="font-size:36px;margin-bottom:8px;">🤖</div>
       <div style="font-size:16px;font-weight:700;">AI 供应商管理器</div>
-      <div style="font-size:13px;color:var(--text-secondary);margin:4px 0;">v1.0.0 PWA</div>
+      <div style="font-size:13px;color:var(--text-secondary);margin:4px 0;">v1.1.0 PWA</div>
       <div style="font-size:12px;color:var(--text-secondary);">管理、测试、监控你的 AI 模型供应商</div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useStore } from '../store'
 
 const { suppliers, clearAll } = useStore()
 
 const darkMode = ref(false)
-const settings = reactive({
-  timeout: 10000,
-  concurrency: 3,
-  autoTest: false,
-})
+const exportMsg = ref('')
 
 onMounted(() => {
   darkMode.value = localStorage.getItem('darkMode') === 'true'
-  const saved = localStorage.getItem('supplier-settings')
-  if (saved) Object.assign(settings, JSON.parse(saved))
 })
 
 function toggleDark() {
@@ -81,14 +67,43 @@ function toggleDark() {
   window.dispatchEvent(new Event('storage'))
 }
 
-function exportData() {
-  const blob = new Blob([JSON.stringify(suppliers.value, null, 2)], { type: 'application/json' })
+// 一键导出明文密钥
+function exportPlaintext() {
+  const data = suppliers.value.map(s => ({
+    name: s.name,
+    icon: s.icon,
+    baseUrl: s.baseUrl,
+    apiKey: s.apiKey,
+    models: s.models,
+    contextLength: s.contextLength,
+    status: s.status,
+    latency: s.latency,
+  }))
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
-  a.download = 'ai-suppliers-backup.json'
+  a.download = `ai-suppliers-${new Date().toISOString().slice(0,10)}.json`
   a.click()
+  exportMsg.value = `已导出 ${data.length} 个供应商（明文密钥）`
+  setTimeout(() => { exportMsg.value = '' }, 3000)
 }
 
+// 导出脱敏JSON
+function exportData() {
+  const data = suppliers.value.map(s => ({
+    ...s,
+    apiKey: s.apiKey.length > 8 ? s.apiKey.slice(0, 4) + '****' + s.apiKey.slice(-4) : '****',
+  }))
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = `ai-suppliers-masked-${new Date().toISOString().slice(0,10)}.json`
+  a.click()
+  exportMsg.value = `已导出 ${data.length} 个供应商（密钥已脱敏）`
+  setTimeout(() => { exportMsg.value = '' }, 3000)
+}
+
+// 导入数据
 function importData() {
   const input = document.createElement('input')
   input.type = 'file'
@@ -100,7 +115,15 @@ function importData() {
     try {
       const data = JSON.parse(text)
       if (Array.isArray(data)) {
-        localStorage.setItem('ai-suppliers', JSON.stringify(data))
+        for (const s of data) {
+          if (s.name && s.baseUrl) {
+            await fetch('/api/suppliers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(s),
+            })
+          }
+        }
         location.reload()
       }
     } catch { alert('无效的JSON文件') }
