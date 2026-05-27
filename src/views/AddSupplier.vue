@@ -1,65 +1,42 @@
 <template>
   <div class="fade-in">
-    <div class="page-header">
-      <router-link to="/" class="back-btn">‹</router-link>
-      <h1 class="page-title">添加供应商</h1>
-    </div>
+    <van-nav-bar title="添加供应商" left-arrow @click-left="$router.back()" :border="false" style="background:transparent;" />
 
-    <div class="section-title">快速添加预设</div>
-    <div class="preset-grid">
-      <div v-for="p in presets" :key="p.name" class="preset-card" :class="{ selected: selected === p.name }" @click="applyPreset(p)">
-        <div class="preset-icon">{{ p.icon }}</div>
-        <div class="preset-name">{{ p.name }}</div>
-      </div>
-    </div>
-
-    <div class="section-title">供应商信息</div>
-    <div class="card card-lg">
-      <div class="input-group">
-        <label class="input-label">名称</label>
-        <input class="input" v-model="form.name" placeholder="例: DeepSeek" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">图标 (emoji)</label>
-        <input class="input" v-model="form.icon" placeholder="🤖" style="width:80px;" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">API Base URL</label>
-        <input class="input" v-model="form.baseUrl" placeholder="https://api.deepseek.com" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">API Key</label>
-        <div style="position:relative;">
-          <input class="input" v-model="form.apiKey" placeholder="sk-..." style="padding-right:40px;" />
-          <button v-if="form.apiKey" @click="copyKey" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;opacity:0.6;" title="复制">{{ copied ? '✅' : '📋' }}</button>
-        </div>
-      </div>
-      <div class="input-group">
-        <label class="input-label">模型 (逗号分隔，连接成功后自动获取)</label>
-        <input class="input" v-model="modelsStr" placeholder="留空，测试连接后自动填充" readonly style="background:var(--bg);opacity:0.8;" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">上下文长度 (自动获取，可手动修改)</label>
-        <input class="input" v-model.number="form.contextLength" type="number" :placeholder="form.contextLength || '测试连接后自动填充'" />
-      </div>
-
-      <button class="btn btn-primary btn-full" @click="testConnection" :disabled="!canTest">
-        {{ testing ? '⏳ 测试中...' : '🔗 测试连接' }}
-      </button>
-
-      <div v-if="testResult" style="margin-top:12px;">
-        <div class="tag" :class="testResult.ok ? 'tag-success' : 'tag-error'" style="font-size:14px;">
-          {{ testResult.ok ? '✅ 连接成功' : '❌ ' + testResult.error }}
-        </div>
-        <div v-if="testResult.ok" style="font-size:13px;color:var(--text-secondary);margin-top:6px;">
-          延迟: {{ testResult.latency }}ms · 发现 {{ testResult.models }} 个模型
-          <span v-if="testResult.maxContext"> · 最大上下文: {{ testResult.maxContext }}K</span>
+    <div class="page-padding">
+      <!-- 预设 -->
+      <div style="font-size:14px;font-weight:600;color:var(--text-secondary);margin-bottom:10px;">快速添加预设</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">
+        <div v-for="p in presets" :key="p.name" class="preset-card" :class="{ selected: selected === p.name }" @click="applyPreset(p)">
+          <div style="font-size:28px;">{{ p.icon }}</div>
+          <div style="font-size:13px;font-weight:600;margin-top:4px;">{{ p.name }}</div>
         </div>
       </div>
 
-      <button class="btn btn-primary btn-full" style="margin-top:16px;" @click="save" :disabled="!canSave">
-        💾 保存供应商
-      </button>
+      <!-- 表单 -->
+      <van-cell-group inset style="border-radius:12px;overflow:hidden;">
+        <van-field v-model="form.name" label="名称" placeholder="例: DeepSeek" />
+        <van-field v-model="form.icon" label="图标" placeholder="🤖" style="max-width:160px;" />
+        <van-field v-model="form.baseUrl" label="Base URL" placeholder="https://api.deepseek.com" />
+        <van-field v-model="form.apiKey" label="API Key" placeholder="sk-...">
+          <template #button>
+            <van-button v-if="form.apiKey" size="small" plain type="primary" @click="copyKey">{{ copied ? '✅' : '📋' }}</van-button>
+          </template>
+        </van-field>
+        <van-field v-model="modelsStr" label="模型" placeholder="测试后自动获取" readonly />
+        <van-field v-model.number="form.contextLength" label="上下文(K)" type="number" placeholder="测试后自动获取" />
+      </van-cell-group>
+
+      <!-- 测试结果 -->
+      <div v-if="testResult" style="margin:14px 0;">
+        <van-notice-bar v-if="testResult.ok" :text="`✅ 连接成功 · ${testResult.latency}ms · ${testResult.models} 个模型${testResult.maxContext ? ' · ' + testResult.maxContext + 'K上下文' : ''}`" color="#2D8B4E" background="#E8F5E9" left-icon="success" />
+        <van-notice-bar v-else :text="`❌ ${testResult.error}`" color="#EE0A24" background="#FDEDED" left-icon="warning-o" />
+      </div>
+
+      <!-- 按钮 -->
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <van-button type="primary" block round :loading="testing" loading-text="测试中..." @click="testConnection" :disabled="!canTest">🔗 测试连接</van-button>
+        <van-button type="success" block round @click="save" :disabled="!canSave">💾 保存</van-button>
+      </div>
     </div>
   </div>
 </template>
@@ -68,6 +45,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useStore } from '../store'
+import { showToast } from 'vant'
 
 const router = useRouter()
 const { addSupplier } = useStore()
@@ -91,11 +69,7 @@ const testResult = ref<{ ok: boolean; latency?: number; models?: number; maxCont
 const canTest = computed(() => form.value.name && form.value.baseUrl && form.value.apiKey && !testing.value)
 const canSave = computed(() => form.value.name && form.value.baseUrl && form.value.apiKey)
 
-function copyKey() {
-  navigator.clipboard.writeText(form.value.apiKey)
-  copied.value = true
-  setTimeout(() => { copied.value = false }, 1500)
-}
+function copyKey() { navigator.clipboard.writeText(form.value.apiKey); copied.value = true; setTimeout(() => { copied.value = false }, 1500) }
 
 function applyPreset(p: typeof presets[0]) {
   selected.value = p.name
@@ -119,22 +93,28 @@ async function testConnection() {
     } else {
       testResult.value = { ok: false, error: data.error || `HTTP ${data.status}` }
     }
-  } catch (e: any) {
-    testResult.value = { ok: false, error: e.message }
-  }
+  } catch (e: any) { testResult.value = { ok: false, error: e.message } }
   testing.value = false
 }
 
 function save() {
   const models = modelsStr.value ? modelsStr.value.split(',').map(m => m.trim()).filter(Boolean) : []
-  addSupplier({
-    name: form.value.name,
-    icon: form.value.icon,
-    baseUrl: form.value.baseUrl.replace(/\/+$/, ''),
-    apiKey: form.value.apiKey,
-    models,
-    contextLength: form.value.contextLength,
-  })
+  addSupplier({ name: form.value.name, icon: form.value.icon, baseUrl: form.value.baseUrl.replace(/\/+$/, ''), apiKey: form.value.apiKey, models, contextLength: form.value.contextLength })
+  showToast({ message: '添加成功', type: 'success' })
   router.push('/')
 }
 </script>
+
+<style scoped>
+.preset-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 8px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-card:active { transform: scale(0.96); }
+.preset-card.selected { border-color: var(--primary); background: rgba(45,139,78,0.06); }
+</style>

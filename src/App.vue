@@ -1,31 +1,18 @@
 <template>
   <div class="app" :class="{ dark: isDark }">
-    <nav class="bottom-nav">
-      <router-link to="/" class="nav-item" active-class="active">
-        <span class="nav-icon">🏠</span>
-        <span class="nav-label">首页</span>
-      </router-link>
-      <router-link to="/add" class="nav-item" active-class="active">
-        <span class="nav-icon">➕</span>
-        <span class="nav-label">添加</span>
-      </router-link>
-      <router-link to="/logs" class="nav-item" active-class="active">
-        <span class="nav-icon">📋</span>
-        <span class="nav-label">日志</span>
-      </router-link>
-      <router-link to="/settings" class="nav-item" active-class="active">
-        <span class="nav-icon">⚙️</span>
-        <span class="nav-label">设置</span>
-      </router-link>
-    </nav>
-    <main class="main-content">
-      <router-view />
-    </main>
+    <router-view />
+    <van-tabbar v-model="active" route active-color="#2D8B4E" inactive-color="#999">
+      <van-tabbar-item to="/" icon="home-o">首页</van-tabbar-item>
+      <van-tabbar-item to="/add" icon="add-o">添加</van-tabbar-item>
+      <van-tabbar-item to="/logs" icon="description">日志</van-tabbar-item>
+      <van-tabbar-item to="/settings" icon="setting-o">设置</van-tabbar-item>
+    </van-tabbar>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+const active = ref(0)
 const isDark = ref(false)
 onMounted(() => {
   isDark.value = localStorage.getItem('darkMode') === 'true'

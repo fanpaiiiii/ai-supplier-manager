@@ -1,41 +1,39 @@
 <template>
   <div class="fade-in">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-      <h1 class="page-title">📋 请求日志</h1>
-      <button class="btn btn-sm btn-outline" @click="clearLogs" v-if="logs.length">🗑️ 清空</button>
-    </div>
+    <van-nav-bar title="请求日志" :border="false" style="background:transparent;">
+      <template #right>
+        <van-icon name="delete-o" size="20" @click="confirmClear" v-if="logs.length" />
+      </template>
+    </van-nav-bar>
 
-    <!-- 筛选 -->
-    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;">
-      <button v-for="f in filters" :key="f.value" class="btn btn-sm" :class="activeFilter === f.value ? 'btn-primary' : 'btn-outline'" @click="activeFilter = f.value">
-        {{ f.label }} <span v-if="f.count" style="opacity:0.7;">({{ f.count }})</span>
-      </button>
-    </div>
+    <div class="page-padding">
+      <!-- 筛选 -->
+      <van-tabs v-model:active="activeFilter" type="card" style="margin-bottom:14px;">
+        <van-tab title="全部" name="all" />
+        <van-tab :title="`API测试(${countByType('api_test')})`" name="api_test" />
+        <van-tab :title="`添加(${countByType('supplier_add')})`" name="supplier_add" />
+        <van-tab :title="`删除(${countByType('supplier_delete')})`" name="supplier_delete" />
+      </van-tabs>
 
-    <div v-if="filtered.length === 0" class="empty-state">
-      <div class="empty-icon">📭</div>
-      <div class="empty-text">暂无日志记录</div>
-    </div>
+      <van-empty v-if="filtered.length === 0" description="暂无日志记录" image="search" />
 
-    <div v-for="log in filtered" :key="log.id" class="card" style="padding:12px 14px;">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <span class="tag" :class="logTypeClass(log.type)">{{ logTypeText(log.type) }}</span>
-        <span style="font-size:13px;font-weight:600;">{{ log.supplier }}</span>
-        <span style="flex:1;"></span>
-        <span class="tag" :class="log.ok ? 'tag-success' : 'tag-error'" v-if="log.type === 'api_test'">
-          {{ log.ok ? '成功' : '失败' }}
-        </span>
-      </div>
-      <div style="font-size:13px;color:var(--text-secondary);line-height:1.6;">
-        <div v-if="log.url" style="word-break:break-all;">URL: {{ log.url }}</div>
-        <div>{{ log.detail }}</div>
-        <div style="display:flex;gap:16px;margin-top:4px;">
-          <span v-if="log.status">HTTP {{ log.status }}</span>
-          <span v-if="log.latency">{{ log.latency }}ms</span>
-          <span v-if="log.models">{{ log.models }} 模型</span>
-          <span style="margin-left:auto;opacity:0.6;">{{ formatTime(log.timestamp) }}</span>
-        </div>
-      </div>
+      <van-cell-group v-else inset style="border-radius:12px;overflow:hidden;">
+        <van-cell v-for="log in filtered" :key="log.id" :title="log.supplier" :label="log.detail">
+          <template #icon>
+            <van-tag :type="logTagType(log.type)" style="margin-right:8px;">{{ logTagText(log.type) }}</van-tag>
+          </template>
+          <template #value>
+            <div style="text-align:right;">
+              <van-tag v-if="log.type === 'api_test'" :type="log.ok ? 'success' : 'danger'" round size="small" style="margin-bottom:4px;">{{ log.ok ? '成功' : '失败' }}</van-tag>
+              <div style="font-size:11px;color:var(--text-secondary);">
+                <span v-if="log.status">HTTP{{ log.status }}</span>
+                <span v-if="log.latency"> · {{ log.latency }}ms</span>
+                <div>{{ formatTime(log.timestamp) }}</div>
+              </div>
+            </div>
+          </template>
+        </van-cell>
+      </van-cell-group>
     </div>
   </div>
 </template>
@@ -43,55 +41,50 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useStore } from '../store'
+import { showDialog } from 'vant'
 
-const { logs, loadLogs, clearLogs: clearLogsApi } = useStore()
+const { logs, loadLogs, clearLogs } = useStore()
 const activeFilter = ref('all')
 
 onMounted(() => { loadLogs(200) })
 
-const filters = computed(() => [
-  { value: 'all', label: '全部', count: logs.value.length },
-  { value: 'api_test', label: 'API测试', count: logs.value.filter(l => l.type === 'api_test').length },
-  { value: 'supplier_add', label: '添加', count: logs.value.filter(l => l.type === 'supplier_add').length },
-  { value: 'supplier_delete', label: '删除', count: logs.value.filter(l => l.type === 'supplier_delete').length },
-])
+function countByType(type: string) { return logs.value.filter(l => l.type === type).length }
 
 const filtered = computed(() => {
   if (activeFilter.value === 'all') return logs.value
   return logs.value.filter(l => l.type === activeFilter.value)
 })
 
-function logTypeClass(type: string) {
+function logTagType(type: string) {
   switch (type) {
-    case 'api_test': return 'tag-info'
-    case 'supplier_add': return 'tag-success'
-    case 'supplier_delete': return 'tag-error'
-    case 'supplier_update': return 'tag-warning'
-    default: return 'tag-info'
+    case 'api_test': return 'primary'
+    case 'supplier_add': return 'success'
+    case 'supplier_delete': return 'danger'
+    case 'supplier_update': return 'warning'
+    default: return 'primary'
   }
 }
 
-function logTypeText(type: string) {
+function logTagText(type: string) {
   switch (type) {
-    case 'api_test': return '🔗 测试'
-    case 'supplier_add': return '➕ 添加'
-    case 'supplier_delete': return '🗑️ 删除'
-    case 'supplier_update': return '✏️ 更新'
+    case 'api_test': return '测试'
+    case 'supplier_add': return '添加'
+    case 'supplier_delete': return '删除'
+    case 'supplier_update': return '更新'
     default: return type
   }
 }
 
 function formatTime(ts: string) {
   const d = new Date(ts)
-  const now = new Date()
-  const diff = now.getTime() - d.getTime()
+  const diff = Date.now() - d.getTime()
   if (diff < 60000) return '刚刚'
   if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
   if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
-  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString()
+  return d.toLocaleDateString()
 }
 
-function clearLogs() {
-  if (confirm('确定清空所有日志？')) clearLogsApi()
+function confirmClear() {
+  showDialog({ title: '清空日志', message: '确定清空所有日志？' }).then(() => { clearLogs() })
 }
 </script>
