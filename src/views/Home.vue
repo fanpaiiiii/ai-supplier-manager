@@ -32,7 +32,7 @@
       </div>
 
       <!-- 搜索+操作 -->
-      <van-search v-model="search" placeholder="搜索供应商..." shape="round" :show-action="false" style="padding:0;margin-bottom:14px;" />
+      <van-search v-model="search" placeholder="搜索供应商..." shape="round" :show-action="false"  />
 
       <div style="display:flex;gap:10px;margin-bottom:18px;">
         <button class="btn btn-primary btn-sm" style="flex:1;" @click="testAll">

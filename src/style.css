@@ -403,12 +403,22 @@ body {
 .van-search {
   background: transparent !important;
   padding: 0 !important;
+  margin-bottom: 14px !important;
 }
 
 .van-search__content {
   background: var(--surface-2) !important;
   border-radius: var(--radius-sm) !important;
-  border: 1px solid var(--border) !important;
+  border: none !important;
+  height: 44px !important;
+}
+
+.van-search__field {
+  height: 44px !important;
+}
+
+.van-field__control {
+  font-size: 14px !important;
 }
 
 .van-cell {

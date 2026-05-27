@@ -11,14 +11,6 @@
     </div>
 
     <div class="page-pad">
-      <div class="section-title" style="margin-bottom:10px;">快速添加</div>
-      <div class="preset-grid">
-        <div v-for="p in presets" :key="p.name" class="preset-card" :class="{ selected: selected === p.name }" @click="applyPreset(p)">
-          <div class="preset-icon">{{ p.icon }}</div>
-          <div class="preset-name">{{ p.name }}</div>
-        </div>
-      </div>
-
       <div class="section-title" style="margin-bottom:10px;">配置信息</div>
       <div class="card">
         <div class="card-body">
